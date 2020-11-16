@@ -1,8 +1,9 @@
 import http.client
 import json
-import time
+import time, threading
 import random
-
+# from timer import timer, flag, flag_change
+flag = False
 class SeasonQuiz:
     def __init__(self):
         self.season = self.get_season()
@@ -39,6 +40,13 @@ class SeasonQuiz:
         teams = json.loads(connection.getresponse().read().decode())
         return teams
     
+    def load_players(self, team):
+        connection = http.client.HTTPConnection('api.football-data.org')
+        headers = {'X-Auth-Token': '539afaf8de7a49ce82df958926dee1c0'}
+        connection.request('GET', f'/v2/teams/{team}', None, headers)
+        players = json.loads(connection.getresponse().read().decode())
+        return players
+    
     def get_teams(self, teams):
         teams_list = [x['name'] for x in teams['teams']]
         return teams_list
@@ -51,6 +59,13 @@ class SeasonQuiz:
 
 
 
+    def timer(self):
+        # print(time.ctime())
+        t = threading.Timer(25, self.flag_change).start()
+        # threading.Timer(90, countdown_warning).start()
+    def flag_change(self):
+        global flag
+        flag = True
 
 
     def question_one(self):
@@ -65,8 +80,13 @@ class SeasonQuiz:
         print("""In this Round, you will be presented with one random Premier League team. You will have
         five minutes to name as many players from this team as you can!
         """)
-        begin_round = input('When you are ready, hit enter! ')
-        print(f'Your team is {random.choice(teams_list)}')
+        input('When you are ready, hit enter! ')
+        team = random.choice(teams_list)
+        team_response = self.load_players(teams_ids[team])
+        players = [x['name'] for x in team_response['squad']]
+        upper_case_players = [x.upper() for x in players]
+        print(f'Your team is {team}')
+
         print('Your time starts in 3....')
         time.sleep(1)
         print('2....')
@@ -74,6 +94,18 @@ class SeasonQuiz:
         print('1.....')
         time.sleep(1)
         print('GO!')
+        points = 0
+        self.timer()
+        while flag == False:
+            answer = input('Enter a players name: ').upper()
+            time.sleep(0.5)
+            if answer in players:
+                points += 1
+                print('Correct answer! ')
+            else:
+                print('Who?')
+        input('Times up! Hit enter to return to the main menu: ')
+
     
     def run(self):
         question_1 = self.question_one()
